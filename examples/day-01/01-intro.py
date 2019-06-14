@@ -16,4 +16,4 @@ true_test = 10 > 5  # True
 false_test = 10 == 5  # False
 
 len(users)  # 3
-users.count("John")  # 1
+print(users.count("John"))  # 1
