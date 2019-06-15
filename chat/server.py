@@ -26,6 +26,9 @@ class Client(Protocol):
         print(f"Client connected: {self.ip}:{self.port}")
 
         self.transport.write("Welcome to the chat v0.1\n".encode())
+        if len(self.factory.log_entries):
+            for entry in self.factory.log_entries:
+                self.transport.write(entry)
 
     def dataReceived(self, data: bytes):
         """
@@ -62,12 +65,14 @@ class Client(Protocol):
 
 class Chat(Factory):
     clients: list
+    log_entries: list
 
     def __init__(self):
         """
         Инициализация сервера
         """
         self.clients = []
+        self.log_entries = []
         print("*" * 10, "\nStart сервер \nCompleted [OK]")
 
     def startFactory(self):
@@ -93,6 +98,7 @@ class Chat(Factory):
         """
         for user in self.clients:
             user.transport.write(f"{data}\n".encode())
+            self.log_entries.append(f"{data}\n".encode())
 
     def can_use_login(self, current_client: Client):
         result = True
