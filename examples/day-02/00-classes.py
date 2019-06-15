@@ -25,7 +25,22 @@ class User(Human):
 john = User("John", "Doe")
 # john.hello()
 artur = User("Artur")
+
+
 # artur.hello()
 # print(john)
 # print(john._User__passport)
 # john._passport = "4312 123123"
+
+class Person:
+    def __init__(self, name):
+        self.name = name
+
+
+bob = Person("Bob")
+tim = Person("Tim")
+sue = Person("Sue")
+people = [bob, tim, sue]
+print(people)
+people.remove(bob)
+print(people)

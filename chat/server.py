@@ -4,6 +4,7 @@ from twisted.internet import reactor
 
 class Client(Protocol):
     ip: str = None
+    port: int = None
     login: str = None
     factory: 'Chat'
 
@@ -18,10 +19,11 @@ class Client(Protocol):
         """
         Обработчик подключения нового клиента
         """
-        self.ip = self.transport.getHost().host
+        self.ip = self.transport.getPeer().host
+        self.port = self.transport.getPeer().port
         self.factory.clients.append(self)
 
-        print(f"Client connected: {self.ip}")
+        print(f"Client connected: {self.ip}:{self.port}")
 
         self.transport.write("Welcome to the chat v0.1\n".encode())
 
@@ -39,12 +41,13 @@ class Client(Protocol):
             print(server_message)
         else:
             if message.startswith("login:"):
-                self.login = message.replace("login:", "")
-
+                self.login = message.replace("login:", "", 1)  # А вдруг я захочу логин с login:
                 notification = f"New user connected: {self.login}"
-
-                self.factory.notify_all_users(notification)
-                print(notification)
+                if not self.factory.can_use_login(self):
+                    self.transport.loseConnection()
+                else:
+                    self.factory.notify_all_users(notification)
+                    print(notification)
             else:
                 print("Error: Invalid client login")
 
@@ -54,7 +57,7 @@ class Client(Protocol):
         :param reason:
         """
         self.factory.clients.remove(self)
-        print(f"Client disconnected: {self.ip}")
+        print(f"Client disconnected: {self.login} ({self.ip}:{self.port})")
 
 
 class Chat(Factory):
@@ -65,7 +68,7 @@ class Chat(Factory):
         Инициализация сервера
         """
         self.clients = []
-        print("*" * 10, "\nStart server \nCompleted [OK]")
+        print("*" * 10, "\nStart сервер \nCompleted [OK]")
 
     def startFactory(self):
         """
@@ -90,6 +93,15 @@ class Chat(Factory):
         """
         for user in self.clients:
             user.transport.write(f"{data}\n".encode())
+
+    def can_use_login(self, current_client: Client):
+        result = True
+        for client in self.clients:
+            if client.login == current_client.login and client != current_client:
+                result = False
+                break
+
+        return result
 
 
 if __name__ == '__main__':
