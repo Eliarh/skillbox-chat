@@ -1,5 +1,6 @@
 from twisted.internet import stdio, reactor
 from twisted.internet.protocol import ClientFactory, Protocol
+import datetime
 
 
 class DataWrapper(Protocol):
@@ -44,6 +45,9 @@ class UserFactory(ClientFactory):
     protocol = UserProtocol
     login: str
 
+    def get_current_time(self):
+        return datetime.datetime.now().time().strftime("%H:%M:%S")
+
     def __init__(self, user_login: str):
         """
         Инициализация клиента
@@ -57,7 +61,7 @@ class UserFactory(ClientFactory):
         :param connector:
         :return:
         """
-        print("Connecting to the server...")
+        print(f"{self.get_current_time()} Connecting to the server...")
 
     def clientConnectionLost(self, connector, reason):
         """
@@ -66,7 +70,11 @@ class UserFactory(ClientFactory):
         :param reason:
         :return:
         """
-        print("Disconnected")
+        print(f"{self.get_current_time()} Disconnected")
+        if connector:
+            print(connector)
+        if reason:
+            print(reason)
         reactor.callFromThread(reactor.stop)
 
     def clientConnectionFailed(self, connector, reason):
@@ -76,7 +84,7 @@ class UserFactory(ClientFactory):
         :param reason:
         :return:
         """
-        print("Connection failed")
+        print(f"{self.get_current_time()} Connection failed")
         reactor.callFromThread(reactor.stop)
 
 

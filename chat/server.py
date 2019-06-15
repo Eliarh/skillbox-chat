@@ -1,5 +1,6 @@
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet import reactor
+import datetime
 
 
 class Client(Protocol):
@@ -23,12 +24,9 @@ class Client(Protocol):
         self.port = self.transport.getPeer().port
         self.factory.clients.append(self)
 
-        print(f"Client connected: {self.ip}:{self.port}")
+        print(f"{self.factory.get_current_time()} Client connected: {self.ip}:{self.port}")
 
         self.transport.write("Welcome to the chat v0.1\n".encode())
-        if len(self.factory.log_entries):
-            for entry in self.factory.log_entries:
-                self.transport.write(entry)
 
     def dataReceived(self, data: bytes):
         """
@@ -41,14 +39,19 @@ class Client(Protocol):
             server_message = f"{self.login}: {message}"
             self.factory.notify_all_users(server_message)
 
-            print(server_message)
+            print(f"{self.factory.get_current_time()} {server_message}")
         else:
             if message.startswith("login:"):
                 self.login = message.replace("login:", "", 1)  # А вдруг я захочу логин с login:
-                notification = f"New user connected: {self.login}"
+                notification = f"{self.factory.get_current_time()} New user connected: {self.login}"
                 if not self.factory.can_use_login(self):
+                    self.transport.write("Login already used\r\n".encode())
                     self.transport.loseConnection()
+                    #reactor.callLater(.1, self.transport.loseConnection)
                 else:
+                    if len(self.factory.log_entries):
+                        for entry in self.factory.log_entries:
+                            self.transport.write(entry)
                     self.factory.notify_all_users(notification)
                     print(notification)
             else:
@@ -60,7 +63,9 @@ class Client(Protocol):
         :param reason:
         """
         self.factory.clients.remove(self)
-        print(f"Client disconnected: {self.login} ({self.ip}:{self.port})")
+        print(f"{self.factory.get_current_time()} Client disconnected: {self.login} ({self.ip}:{self.port})")
+        # if reason:
+        #    print(f"Reason {reason}")
 
 
 class Chat(Factory):
@@ -97,8 +102,12 @@ class Chat(Factory):
         :return:
         """
         for user in self.clients:
-            user.transport.write(f"{data}\n".encode())
-            self.log_entries.append(f"{data}\n".encode())
+            message=f"{self.get_current_time()} {data}\n".encode()
+            user.transport.write(message)
+            self.log_entries.append(message)
+
+    def get_current_time(self):
+        return datetime.datetime.now().time().strftime("%H:%M:%S")
 
     def can_use_login(self, current_client: Client):
         result = True
